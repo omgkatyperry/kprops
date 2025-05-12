@@ -7,25 +7,27 @@ import requests
 from sklearn.ensemble import RandomForestRegressor
 from datetime import datetime, timedelta
 
-# --- Enhanced Pitcher Stats Scraper (Baseball Reference Standard Pitching + advanced metrics) ---
+# --- Safe & Verbose Pitcher Stats Scraper ---
 def get_pitcher_stats():
     url = "https://www.baseball-reference.com/leagues/majors/2024-standard-pitching.shtml"
     try:
         tables = pd.read_html(url)
-        for table in tables:
-            if 'Player' in table.columns and 'SO9' in table.columns and 'IP' in table.columns and 'H/9' in table.columns:
+        st.write(f"✅ Found {len(tables)} tables.")
+        for i, table in enumerate(tables):
+            st.write(f"🔍 Table {i} Columns: {list(table.columns)}")
+            if 'Player' in table.columns and 'SO9' in table.columns and 'IP' in table.columns:
                 df = table[['Player', 'IP', 'SO9', 'BB9', 'H/9', 'HR/9', 'ERA', 'FIP', 'WHIP']].copy()
                 df.columns = ['Pitcher', 'IP', 'K9', 'BB9', 'H9', 'HR9', 'ERA', 'FIP', 'WHIP']
                 df['Pitcher'] = df['Pitcher'].str.replace(r'\.*', '', regex=True).str.strip()
                 df = df.apply(pd.to_numeric, errors='ignore')
                 return df
-        st.error("❌ No valid pitcher stat table found.")
-        return pd.DataFrame()
+        st.warning("⚠️ No valid pitcher table found in Baseball-Reference scrape.")
+        return pd.DataFrame(columns=['Pitcher', 'IP', 'K9', 'BB9', 'H9', 'HR9', 'ERA', 'FIP', 'WHIP'])
     except Exception as e:
         st.error(f"❌ Failed to scrape pitcher stats: {e}")
-        return pd.DataFrame()
+        return pd.DataFrame(columns=['Pitcher', 'IP', 'K9', 'BB9', 'H9', 'HR9', 'ERA', 'FIP', 'WHIP'])
 
-# Placeholder opponent batting stats (can be replaced with scraper)
+# Dummy opponent team batting stats
 def get_team_batting_stats():
     return {
         'Yankees': {'K%': 22.3, 'wRC+': 107},
@@ -49,29 +51,33 @@ def train_model():
         'Predicted_Ks': [6.5, 5.0, 7.2, 4.3, 8.0]
     })
     X = data.drop(columns='Predicted_Ks')
-    y = data['Predicted_Ks']
+    y = data['Projected_Ks']
     model = RandomForestRegressor(n_estimators=100, random_state=42)
     model.fit(X, y)
     return model
 
-# --- Streamlit App ---
+# --- Streamlit App Layout ---
 st.set_page_config(page_title="MLB Strikeout Prop Dashboard", layout="wide")
 st.markdown("""
 # 📈 Enhanced Pitcher Strikeout Predictor
 
-This dashboard projects MLB pitcher strikeouts based on real stats. Select a date to view matchups.
+This dashboard projects MLB pitcher strikeouts using real stats.
 """)
 
 options = [(datetime.today() + timedelta(days=i)).strftime('%Y-%m-%d') for i in range(4)]
 selected_date = st.selectbox("Select Game Date", options)
+st.markdown(f"**Selected date:** `{selected_date}`  
+**Last updated:** `{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}`")
 
 def get_pitchers_by_date(date):
     pitcher_stats = get_pitcher_stats()
     team_stats = get_team_batting_stats()
+    if pitcher_stats.empty:
+        return pd.DataFrame()
 
-    mlb_url = f"https://statsapi.mlb.com/api/v1/schedule?sportId=1&date={date}&hydrate=probablePitcher"
+    url = f"https://statsapi.mlb.com/api/v1/schedule?sportId=1&date={date}&hydrate=probablePitcher"
     try:
-        games = requests.get(mlb_url).json().get('dates', [])[0].get('games', [])
+        games = requests.get(url).json().get('dates', [])[0].get('games', [])
     except:
         return pd.DataFrame()
 
@@ -88,13 +94,12 @@ def get_pitchers_by_date(date):
             opp = away if side == 'home' else home
             matchup = f"vs {opp}" if side == 'home' else f"@ {opp}"
             row = {'Pitcher': name, 'Team': team, 'Matchup': matchup}
-
             last_name = name.split()[-1].lower()
-            stat = pitcher_stats[pitcher_stats['Pitcher'].str.lower().str.contains(last_name)]
-            if not stat.empty:
-                for col in ['K9', 'BB9', 'H9', 'HR9', 'ERA', 'FIP', 'WHIP', 'IP']:
-                    row[col] = stat.iloc[0][col]
-
+            if 'Pitcher' in pitcher_stats.columns:
+                stat = pitcher_stats[pitcher_stats['Pitcher'].str.lower().str.contains(last_name)]
+                if not stat.empty:
+                    for col in ['K9', 'BB9', 'H9', 'HR9', 'ERA', 'FIP', 'WHIP', 'IP']:
+                        row[col] = stat.iloc[0][col]
             opp_stats = team_stats.get(opp, {})
             row['Opponent_K%'] = opp_stats.get('K%', np.nan)
             row['Opponent_wRC+'] = opp_stats.get('wRC+', np.nan)
@@ -107,16 +112,16 @@ df = get_pitchers_by_date(selected_date)
 features = ['K9', 'BB9', 'H9', 'HR9', 'ERA', 'FIP', 'WHIP', 'Opponent_K%', 'Opponent_wRC+']
 
 if df.empty:
-    st.warning("No pitcher data available.")
+    st.warning("⚠️ No pitcher data found or available.")
 else:
     for col in features:
         df[col] = pd.to_numeric(df[col], errors='coerce')
     df.dropna(subset=features, inplace=True)
     if df.empty:
-        st.warning("No usable pitcher rows after filtering.")
+        st.warning("⚠️ No usable pitcher rows after filtering.")
     else:
         df['Predicted_Ks'] = model.predict(df[features])
         display_cols = ['Pitcher', 'Team', 'Matchup'] + features + ['Predicted_Ks']
         df[features + ['Predicted_Ks']] = df[features + ['Predicted_Ks']].round(2)
         st.subheader("📊 Predicted Strikeouts")
-st.dataframe(df[display_cols].sort_values(by='Predicted_Ks', ascending=False).reset_index(drop=True), use_container_width=True)
+        st.dataframe(df[display_cols].sort_values(by='Predicted_Ks', ascending=False).reset_index(drop=True), use_container_width=True)
