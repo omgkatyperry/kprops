@@ -183,11 +183,14 @@ def get_pitchers_by_date(date):
 model = train_model()
 pitchers_df = get_pitchers_by_date(selected_date)
 
-# Ensure required features are present and numeric
-features = ['Avg_K_9', 'Innings_Pitched', 'Opponent_K_Rate', 'Opponent_BA', 'Opponent_OBP', 'Opponent_WRC_Plus', 'Umpire_K_Factor']
-for col in features:
-    pitchers_df[col] = pd.to_numeric(pitchers_df[col], errors='coerce')
-pitchers_df.dropna(subset=features, inplace=True)
+# Handle empty dataframe case
+if pitchers_df.empty:
+    st.warning("No pitcher data available for the selected date.")
+else:
+    # Ensure required features are present and numeric
+    for col in features:
+        pitchers_df[col] = pd.to_numeric(pitchers_df[col], errors='coerce')
+    pitchers_df.dropna(subset=features, inplace=True)
 
 try:
     # Predict strikeouts
