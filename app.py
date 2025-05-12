@@ -145,20 +145,28 @@ def get_pitchers_by_date(date):
 
     rows = []
     for game in games:
+        st.write("
+--- GAME ---")
+        st.write("Home Team:", game['teams']['home']['team']['name'])
+        st.write("Away Team:", game['teams']['away']['team']['name'])
         home = game['teams']['home']['team']['name']
         away = game['teams']['away']['team']['name']
         ump_name = get_scheduled_umpire(home, away)
         kfactor = umpire_map.get(ump_name, 1.00)
 
         for side in ['home', 'away']:
+            st.write(f"Processing {side} pitcher...")
             pitcher = game['teams'][side].get('probablePitcher')
-            if not pitcher: continue
+            if not pitcher:
+                st.write("No probable pitcher for", side)
+                continue
             name = pitcher['fullName']
             team = home if side == 'home' else away
             opp = away if side == 'home' else home
             matchup = f"vs {opp}" if side == 'home' else f"@ {opp}"
 
             row = {'Pitcher': name, 'Team': team, 'Matchup': matchup, 'Umpire_K_Factor': kfactor}
+            st.write("Pitcher Name:", name)
 
             stat = pitcher_stats[pitcher_stats['Pitcher'].str.contains(name.split()[-1], case=False)]
             if not stat.empty:
@@ -182,6 +190,9 @@ def get_pitchers_by_date(date):
 # Train model and get pitcher data
 model = train_model()
 pitchers_df = get_pitchers_by_date(selected_date)
+st.subheader("🔍 Debug Info")
+st.write("Pitcher DataFrame Before Filtering:")
+st.dataframe(pitchers_df)
 
 # Define features used in the model
 features = [
@@ -214,7 +225,7 @@ else:
 
         # Display
         display_cols = ['Pitcher', 'Team', 'Matchup', 'Predicted_Ks', 'DK', 'FD', 'B365', 'Edge_vs_DK', 'Edge_vs_FD', 'Edge_vs_B365']
-    st.dataframe(pitchers_df[display_cols].sort_values(by='Predicted_Ks', ascending=False).reset_index(drop=True))
+        st.dataframe(pitchers_df[display_cols].sort_values(by='Predicted_Ks', ascending=False).reset_index(drop=True))
 
-        except NotFittedError:
+    except NotFittedError:
             st.error("Model could not be fitted. Check training data.")
