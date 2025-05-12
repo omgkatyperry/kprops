@@ -17,12 +17,18 @@ def get_pitchers_by_date(selected_date):
         games = data['dates'][0]['games']
         for game in games:
             teams = game.get('teams', {})
+            home_team = teams.get('home', {}).get('team', {}).get('name', 'Home')
+            away_team = teams.get('away', {}).get('team', {}).get('name', 'Away')
             for side in ['home', 'away']:
                 pitcher_info = teams.get(side, {}).get('probablePitcher')
                 if pitcher_info:
                     pitcher_name = pitcher_info['fullName']
+                    pitcher_team = home_team if side == 'home' else away_team
+                    opponent_team = away_team if side == 'home' else home_team
                     pitcher_data = {
                         'Pitcher': pitcher_name,
+                        'Team': pitcher_team,
+                        'Matchup': f"{pitcher_team} vs {opponent_team}",
                         'Avg_K_9': np.random.uniform(7.5, 11.5),
                         'Innings_Pitched': np.random.uniform(5.0, 7.0),
                         'Opponent_K_Rate': np.random.uniform(18.0, 27.0),
@@ -72,6 +78,15 @@ def predict_props(data, model):
 
 # --- Streamlit App ---
 st.set_page_config(page_title="MLB Strikeout Prop Dashboard", layout="wide")
+st.markdown("""
+    <style>
+        .main {background-color: #f9f9f9;}
+        .css-18e3th9 {padding-top: 2rem;}
+        .block-container {padding: 2rem;}
+        .stDataFrame th, .stDataFrame td {text-align: center; font-size: 14px;}
+    </style>
+""", unsafe_allow_html=True)
+
 st.title("⚾ Daily Pitcher Strikeout Props")
 
 # Date picker dropdown
@@ -88,11 +103,15 @@ else:
     model = train_model()
     results = predict_props(data, model)
 
-    # Display output
-    st.dataframe(results[['Pitcher', 'Predicted_Ks', 'Sportsbook_Line', 'Edge', 'Confidence']])
-
     # Optional filters
     conf_filter = st.selectbox("Filter by Confidence", options=['All', 'High', 'Moderate', 'Low'])
     if conf_filter != 'All':
         results = results[results['Confidence'] == conf_filter]
-        st.dataframe(results[['Pitcher', 'Predicted_Ks', 'Sportsbook_Line', 'Edge', 'Confidence']])
+
+    # Display output
+    display_cols = [
+        'Pitcher', 'Team', 'Matchup', 'Predicted_Ks', 'Sportsbook_Line', 'Edge', 'Confidence',
+        'Avg_K_9', 'Innings_Pitched', 'Opponent_K_Rate', 'Opponent_BA',
+        'Opponent_OBP', 'Opponent_WRC_Plus', 'Opponent_vs_Handedness_KRate', 'Umpire_K_Factor'
+    ]
+    st.dataframe(results[display_cols].sort_values(by='Predicted_Ks', ascending=False).reset_index(drop=True))
