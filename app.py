@@ -10,7 +10,7 @@ from datetime import datetime, timedelta
 def get_fangraphs_pitcher_stats():
     url = "https://www.fangraphs.com/leaders.aspx?pos=all&stats=pit&lg=all&qual=0&type=1&season=2024&month=0&season1=2024&ind=0"
     try:
-                tables = pd.read_html(url)
+        tables = pd.read_html(url)
         for table in tables:
             if 'Name' in table.columns and 'K/9' in table.columns and 'IP' in table.columns:
                 df = table[['Name', 'K/9', 'IP']].copy()
@@ -45,7 +45,7 @@ def get_team_batting_stats():
         print("Failed to scrape team batting stats from FanGraphs:", e)
         return {}
 
-# --- Simulated Umpire K Factor Map ---
+# --- Umpire K Factor ---
 def get_umpire_k_factors():
     return {
         'James Hoye': 1.05,
@@ -55,7 +55,7 @@ def get_umpire_k_factors():
         'Tripp Gibson': 0.98,
     }
 
-# --- Scheduled Umpire Mapping ---
+# --- Scheduled Umpire Mapping (Scrapes from Rotowire) ---
 def get_scheduled_umpire(home_team, away_team):
     try:
         schedule_url = "https://www.rotowire.com/baseball/mlb-lineups.php"
@@ -68,7 +68,8 @@ def get_scheduled_umpire(home_team, away_team):
             ump_info = matchup.find('div', class_='lineup__note')
             if ump_info and 'Umpire:' in ump_info.text:
                 text = ump_info.text.strip()
-                ump_line = [line for line in text.split('\n') if 'Umpire:' in line]
+                ump_line = [line for line in text.split('
+') if 'Umpire:' in line]
                 if ump_line:
                     ump_name = ump_line[0].split('Umpire:')[-1].strip()
                     if home_team in teams and away_team in teams:
@@ -78,7 +79,7 @@ def get_scheduled_umpire(home_team, away_team):
         print("Failed to get scheduled umpire:", e)
         return None
 
-# --- Odds Aggregator ---
+# --- Scrape Strikeout Odds from OddsBoom ---
 def get_strikeout_odds():
     url = "https://www.oddsboom.com/mlb/strikeouts"
     odds_data = {}
@@ -100,7 +101,7 @@ def get_strikeout_odds():
         print("Failed to scrape strikeout props:", e)
         return {}
 
-# --- Prediction Model ---
+# --- Model Training ---
 def train_model():
     data = pd.DataFrame({
         'Avg_K_9': [9.5, 8.2, 10.1, 7.3, 11.0],
@@ -118,19 +119,15 @@ def train_model():
     model.fit(X, y)
     return model
 
-# --- Streamlit UI ---
+# --- Streamlit App UI + Prediction Logic ---
 st.set_page_config(page_title="MLB Strikeout Prop Dashboard", layout="wide")
-st.title("⚾ Daily Pitcher Strikeout Props")
+st.title("⚾ Daily Pitcher Strikeout Model")
 
 options = [(datetime.today() + timedelta(days=i)).strftime('%Y-%m-%d') for i in range(4)]
 selected_date = st.selectbox("Select Game Date", options)
-
 st.caption(f"Selected date: {selected_date} — Last updated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
 
-# --- Generate and Display Model Predictions ---
-from sklearn.exceptions import NotFittedError
-
-# Placeholder function to gather real pitcher/matchup data
+# Placeholder for model-driven prediction function
 def get_pitchers_by_date(date):
     pitcher_stats = get_fangraphs_pitcher_stats()
     team_stats = get_team_batting_stats()
@@ -145,27 +142,22 @@ def get_pitchers_by_date(date):
 
     rows = []
     for game in games:
-        st.write("--- GAME ---")
-        st.write("Home Team:", game['teams']['home']['team']['name'])
-        st.write("Away Team:", game['teams']['away']['team']['name'])
         home = game['teams']['home']['team']['name']
         away = game['teams']['away']['team']['name']
         ump_name = get_scheduled_umpire(home, away)
         kfactor = umpire_map.get(ump_name, 1.00)
 
         for side in ['home', 'away']:
-            st.write(f"Processing {side} pitcher...")
             pitcher = game['teams'][side].get('probablePitcher')
             if not pitcher:
-                st.write("No probable pitcher for", side)
                 continue
+
             name = pitcher['fullName']
             team = home if side == 'home' else away
             opp = away if side == 'home' else home
             matchup = f"vs {opp}" if side == 'home' else f"@ {opp}"
 
             row = {'Pitcher': name, 'Team': team, 'Matchup': matchup, 'Umpire_K_Factor': kfactor}
-            st.write("Pitcher Name:", name)
 
             stat = pitcher_stats[pitcher_stats['Pitcher'].str.contains(name.split()[-1], case=False)]
             if not stat.empty:
@@ -186,45 +178,36 @@ def get_pitchers_by_date(date):
             rows.append(row)
     return pd.DataFrame(rows)
 
-# Train model and get pitcher data
 model = train_model()
 pitchers_df = get_pitchers_by_date(selected_date)
-st.subheader("🔍 Debug Info")
-st.write("Pitcher DataFrame Before Filtering:")
-st.dataframe(pitchers_df)
 
-# Define features used in the model
 features = [
     'Avg_K_9', 'Innings_Pitched', 'Opponent_K_Rate',
-    'Opponent_BA', 'Opponent_OBP', 'Opponent_WRC_Plus',
-    'Umpire_K_Factor'
+    'Opponent_BA', 'Opponent_OBP', 'Opponent_WRC_Plus', 'Umpire_K_Factor'
 ]
 
-# Handle empty dataframe case
 if pitchers_df.empty:
     st.warning("No pitcher data available for the selected date.")
 else:
-    # Ensure required features are present and numeric
     for col in features:
         if col in pitchers_df.columns:
             pitchers_df[col] = pd.to_numeric(pitchers_df[col], errors='coerce')
         else:
             pitchers_df[col] = np.nan
+
     pitchers_df.dropna(subset=features, inplace=True)
 
-if pitchers_df.empty:
-    st.warning("No usable pitcher data found after filtering. Likely due to unmatched names or missing stats.")
-else:
-    try:
-        # Predict strikeouts
-        pitchers_df['Predicted_Ks'] = model.predict(pitchers_df[features])
-        pitchers_df['Edge_vs_DK'] = pitchers_df['Predicted_Ks'] - pitchers_df['DK']
-        pitchers_df['Edge_vs_FD'] = pitchers_df['Predicted_Ks'] - pitchers_df['FD']
-        pitchers_df['Edge_vs_B365'] = pitchers_df['Predicted_Ks'] - pitchers_df['B365']
+    if pitchers_df.empty:
+        st.warning("No usable pitcher data found after filtering. Likely due to unmatched names or missing stats.")
+    else:
+        try:
+            pitchers_df['Predicted_Ks'] = model.predict(pitchers_df[features])
+            pitchers_df['Edge_vs_DK'] = pitchers_df['Predicted_Ks'] - pitchers_df['DK']
+            pitchers_df['Edge_vs_FD'] = pitchers_df['Predicted_Ks'] - pitchers_df['FD']
+            pitchers_df['Edge_vs_B365'] = pitchers_df['Predicted_Ks'] - pitchers_df['B365']
 
-        # Display
-        display_cols = ['Pitcher', 'Team', 'Matchup', 'Predicted_Ks', 'DK', 'FD', 'B365', 'Edge_vs_DK', 'Edge_vs_FD', 'Edge_vs_B365']
-        st.dataframe(pitchers_df[display_cols].sort_values(by='Predicted_Ks', ascending=False).reset_index(drop=True))
+            display_cols = ['Pitcher', 'Team', 'Matchup', 'Predicted_Ks', 'DK', 'FD', 'B365', 'Edge_vs_DK', 'Edge_vs_FD', 'Edge_vs_B365']
+            st.dataframe(pitchers_df[display_cols].sort_values(by='Predicted_Ks', ascending=False).reset_index(drop=True))
 
-    except NotFittedError:
-            st.error("Model could not be fitted. Check training data.")
+        except Exception as e:
+            st.error(f"Prediction failed: {e}")
