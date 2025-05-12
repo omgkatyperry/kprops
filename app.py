@@ -25,10 +25,11 @@ def get_pitchers_by_date(selected_date):
                     pitcher_name = pitcher_info['fullName']
                     pitcher_team = home_team if side == 'home' else away_team
                     opponent_team = away_team if side == 'home' else home_team
+                    matchup = f"vs {opponent_team}" if side == 'home' else f"@ {opponent_team}"
                     pitcher_data = {
                         'Pitcher': pitcher_name,
                         'Team': pitcher_team,
-                        'Matchup': f"{pitcher_team} vs {opponent_team}",
+                        'Matchup': matchup,
                         'Avg_K_9': np.random.uniform(7.5, 11.5),
                         'Innings_Pitched': np.random.uniform(5.0, 7.0),
                         'Opponent_K_Rate': np.random.uniform(18.0, 27.0),
