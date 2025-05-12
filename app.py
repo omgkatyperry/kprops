@@ -12,9 +12,7 @@ def get_pitcher_stats():
     url = "https://www.baseball-reference.com/leagues/majors/2024-standard-pitching.shtml"
     try:
         tables = pd.read_html(url)
-        st.write(f'Found {len(tables)} tables on page.')
-        for i, table in enumerate(tables):
-            st.write(f'Table {i} columns:', list(table.columns))
+        for table in tables:
             if 'Player' in table.columns and 'SO9' in table.columns and 'IP' in table.columns and 'H/9' in table.columns:
                 df = table[['Player', 'IP', 'SO9', 'BB9', 'H/9', 'HR/9', 'ERA', 'FIP', 'WHIP']].copy()
                 df.columns = ['Pitcher', 'IP', 'K9', 'BB9', 'H9', 'HR9', 'ERA', 'FIP', 'WHIP']
@@ -22,10 +20,10 @@ def get_pitcher_stats():
                 df = df.apply(pd.to_numeric, errors='ignore')
                 return df
         st.error("❌ No valid pitcher stat table found.")
-        return pd.DataFrame(columns=['Pitcher', 'IP', 'K9', 'BB9', 'H9', 'HR9', 'ERA', 'FIP', 'WHIP'])
+        return pd.DataFrame()
     except Exception as e:
         st.error(f"❌ Failed to scrape pitcher stats: {e}")
-        return pd.DataFrame(columns=['Pitcher', 'IP', 'K9', 'BB9', 'H9', 'HR9', 'ERA', 'FIP', 'WHIP'])
+        return pd.DataFrame()
 
 # Placeholder opponent batting stats (can be replaced with scraper)
 def get_team_batting_stats():
@@ -58,7 +56,11 @@ def train_model():
 
 # --- Streamlit App ---
 st.set_page_config(page_title="MLB Strikeout Prop Dashboard", layout="wide")
-st.title("📈 Enhanced Pitcher Strikeout Predictor")
+st.markdown("""
+# 📈 Enhanced Pitcher Strikeout Predictor
+
+This dashboard projects MLB pitcher strikeouts based on real stats. Select a date to view matchups.
+""")
 
 options = [(datetime.today() + timedelta(days=i)).strftime('%Y-%m-%d') for i in range(4)]
 selected_date = st.selectbox("Select Game Date", options)
@@ -71,7 +73,7 @@ def get_pitchers_by_date(date):
     try:
         games = requests.get(mlb_url).json().get('dates', [])[0].get('games', [])
     except:
-        return pd.DataFrame(columns=['Pitcher', 'IP', 'K9', 'BB9', 'H9', 'HR9', 'ERA', 'FIP', 'WHIP'])
+        return pd.DataFrame()
 
     rows = []
     for game in games:
@@ -116,4 +118,5 @@ else:
         df['Predicted_Ks'] = model.predict(df[features])
         display_cols = ['Pitcher', 'Team', 'Matchup'] + features + ['Predicted_Ks']
         df[features + ['Predicted_Ks']] = df[features + ['Predicted_Ks']].round(2)
-        st.dataframe(df[display_cols].sort_values(by='Predicted_Ks', ascending=False).reset_index(drop=True), use_container_width=True)
+        st.subheader("📊 Predicted Strikeouts")
+st.dataframe(df[display_cols].sort_values(by='Predicted_Ks', ascending=False).reset_index(drop=True), use_container_width=True)
