@@ -1,5 +1,5 @@
 
-# Streamlit App: Enhanced MLB Strikeout Prop Dashboard with Full Pitcher Stats
+# Streamlit App: Enhanced MLB Strikeout Prop Dashboard with FanGraphs Pitcher Stats
 import streamlit as st
 import pandas as pd
 import numpy as np
@@ -7,22 +7,23 @@ import requests
 from sklearn.ensemble import RandomForestRegressor
 from datetime import datetime, timedelta
 
-# --- Pitcher Stats Scraper with Hardcoded Table Index ---
+# --- FanGraphs Pitcher Stats Scraper ---
 def get_pitcher_stats():
-    url = "https://www.baseball-reference.com/leagues/majors/2024-standard-pitching.shtml"
+    url = "https://www.fangraphs.com/leaders.aspx?pos=all&stats=pit&lg=all&qual=0&type=8&season=2024&month=0&season1=2024&ind=0"
     try:
         tables = pd.read_html(url)
-        st.write(f"✅ Scraped {len(tables)} tables from Baseball-Reference.")
-        df = tables[1]  # Assumes table 1 is the correct one for 2024 Standard Pitching
-        df = df[['Player', 'IP', 'SO9', 'BB9', 'H/9', 'HR/9', 'ERA', 'FIP', 'WHIP']].copy()
-        df.columns = ['Pitcher', 'IP', 'K9', 'BB9', 'H9', 'HR9', 'ERA', 'FIP', 'WHIP']
-        df['Pitcher'] = df['Pitcher'].str.replace(r'\.*', '', regex=True).str.strip()
-        df = df.apply(pd.to_numeric, errors='ignore')
-        return df
+        for table in tables:
+            if 'Name' in table.columns and 'K/9' in table.columns and 'BB/9' in table.columns:
+                df = table[['Name', 'IP', 'K/9', 'BB/9', 'H/9', 'HR/9', 'ERA', 'FIP', 'WHIP']].copy()
+                df.columns = ['Pitcher', 'IP', 'K9', 'BB9', 'H9', 'HR9', 'ERA', 'FIP', 'WHIP']
+                df['Pitcher'] = df['Pitcher'].str.strip()
+                return df
+        return pd.DataFrame(columns=['Pitcher', 'IP', 'K9', 'BB9', 'H9', 'HR9', 'ERA', 'FIP', 'WHIP'])
     except Exception as e:
-        st.error(f"❌ Failed to load pitcher stats: {e}")
+        st.error(f"❌ Failed to load pitcher stats from FanGraphs: {e}")
         return pd.DataFrame(columns=['Pitcher', 'IP', 'K9', 'BB9', 'H9', 'HR9', 'ERA', 'FIP', 'WHIP'])
 
+# Placeholder opponent stats
 def get_team_batting_stats():
     return {
         'Yankees': {'K%': 22.3, 'wRC+': 107},
@@ -31,6 +32,7 @@ def get_team_batting_stats():
         'Blue Jays': {'K%': 21.2, 'wRC+': 98},
     }
 
+# --- Train Model ---
 def train_model():
     data = pd.DataFrame({
         'K9': [9.5, 8.2, 10.1, 7.3, 11.0],
@@ -50,12 +52,11 @@ def train_model():
     model.fit(X, y)
     return model
 
-# --- Streamlit App Layout ---
-st.set_page_config(page_title="MLB Strikeout Prop Dashboard", layout="wide")
+# --- Streamlit Layout ---
+st.set_page_config(page_title="MLB Strikeout Predictor", layout="wide")
 st.markdown("""
-# 📈 Enhanced Pitcher Strikeout Predictor
-
-This dashboard projects MLB pitcher strikeouts using real stats.
+# ⚾ FanGraphs Strikeout Prediction Dashboard
+This app scrapes real pitcher data from FanGraphs to estimate strikeouts per game.
 """)
 
 options = [(datetime.today() + timedelta(days=i)).strftime('%Y-%m-%d') for i in range(4)]
@@ -89,11 +90,10 @@ def get_pitchers_by_date(date):
             matchup = f"vs {opp}" if side == 'home' else f"@ {opp}"
             row = {'Pitcher': name, 'Team': team, 'Matchup': matchup}
             last_name = name.split()[-1].lower()
-            if 'Pitcher' in pitcher_stats.columns:
-                stat = pitcher_stats[pitcher_stats['Pitcher'].str.lower().str.contains(last_name)]
-                if not stat.empty:
-                    for col in ['K9', 'BB9', 'H9', 'HR9', 'ERA', 'FIP', 'WHIP', 'IP']:
-                        row[col] = stat.iloc[0][col]
+            stat = pitcher_stats[pitcher_stats['Pitcher'].str.lower().str.contains(last_name)]
+            if not stat.empty:
+                for col in ['K9', 'BB9', 'H9', 'HR9', 'ERA', 'FIP', 'WHIP', 'IP']:
+                    row[col] = stat.iloc[0][col]
             opp_stats = team_stats.get(opp, {})
             row['Opponent_K%'] = opp_stats.get('K%', np.nan)
             row['Opponent_wRC+'] = opp_stats.get('wRC+', np.nan)
