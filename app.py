@@ -16,8 +16,9 @@ def get_pitchers_by_date(selected_date):
     try:
         games = data['dates'][0]['games']
         for game in games:
-            for team in ['away', 'home']:
-                pitcher_info = game.get(f'{team}ProbablePitcher') or game.get(team, {}).get('probablePitcher')
+            teams = game.get('teams', {})
+            for side in ['home', 'away']:
+                pitcher_info = teams.get(side, {}).get('probablePitcher')
                 if pitcher_info:
                     pitcher_name = pitcher_info['fullName']
                     pitcher_data = {
