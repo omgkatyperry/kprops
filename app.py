@@ -3,39 +3,38 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 import requests
-from bs4 import BeautifulSoup
 from sklearn.ensemble import RandomForestRegressor
 from datetime import datetime, timedelta
 
-# --- Data Scraper for Probable Starters from MLB.com ---
+# --- Data Scraper from MLB's JSON API ---
 def get_pitchers_by_date(selected_date):
-    url = f"https://www.mlb.com/probable-pitchers/{selected_date}"
-    response = requests.get(url)
-    soup = BeautifulSoup(response.text, 'html.parser')
-
     pitchers = []
-    name_tags = soup.select("a.probable-pitchers__pitcher-name")
+    url = f"https://statsapi.mlb.com/api/v1/schedule?sportId=1&date={selected_date}&hydrate=probablePitcher"
+    response = requests.get(url)
+    data = response.json()
 
-    for name_tag in name_tags:
-        try:
-            pitcher_name = name_tag.text.strip()
-
-            # Simulated placeholder stats for now
-            pitcher_data = {
-                'Pitcher': pitcher_name,
-                'Avg_K_9': np.random.uniform(7.5, 11.5),
-                'Innings_Pitched': np.random.uniform(5.0, 7.0),
-                'Opponent_K_Rate': np.random.uniform(18.0, 27.0),
-                'Opponent_BA': np.random.uniform(0.220, 0.270),
-                'Opponent_OBP': np.random.uniform(0.290, 0.340),
-                'Opponent_WRC_Plus': np.random.randint(85, 110),
-                'Opponent_vs_Handedness_KRate': np.random.uniform(18.0, 30.0),
-                'Umpire_K_Factor': np.random.uniform(0.95, 1.05),
-                'Sportsbook_Line': np.random.uniform(4.5, 7.5)
-            }
-            pitchers.append(pitcher_data)
-        except Exception:
-            continue
+    try:
+        games = data['dates'][0]['games']
+        for game in games:
+            for team in ['away', 'home']:
+                pitcher_info = game.get(f'{team}ProbablePitcher') or game.get(team, {}).get('probablePitcher')
+                if pitcher_info:
+                    pitcher_name = pitcher_info['fullName']
+                    pitcher_data = {
+                        'Pitcher': pitcher_name,
+                        'Avg_K_9': np.random.uniform(7.5, 11.5),
+                        'Innings_Pitched': np.random.uniform(5.0, 7.0),
+                        'Opponent_K_Rate': np.random.uniform(18.0, 27.0),
+                        'Opponent_BA': np.random.uniform(0.220, 0.270),
+                        'Opponent_OBP': np.random.uniform(0.290, 0.340),
+                        'Opponent_WRC_Plus': np.random.randint(85, 110),
+                        'Opponent_vs_Handedness_KRate': np.random.uniform(18.0, 30.0),
+                        'Umpire_K_Factor': np.random.uniform(0.95, 1.05),
+                        'Sportsbook_Line': np.random.uniform(4.5, 7.5)
+                    }
+                    pitchers.append(pitcher_data)
+    except Exception as e:
+        print("Error parsing MLB API:", e)
 
     return pd.DataFrame(pitchers)
 
@@ -83,7 +82,7 @@ st.caption(f"Selected date: {selected_date} — Last updated: {datetime.now().st
 data = get_pitchers_by_date(selected_date)
 
 if data.empty:
-    st.warning("No starting pitchers were found for the selected date. MLB.com may not have updated that day yet.")
+    st.warning("No starting pitchers were found for the selected date. MLB API may not have been updated yet.")
 else:
     model = train_model()
     results = predict_props(data, model)
