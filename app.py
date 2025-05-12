@@ -64,6 +64,27 @@ def train_model():
 
 # --- Streamlit App UI + Prediction Logic ---
 st.set_page_config(page_title="MLB Strikeout Prop Dashboard", layout="wide")
+st.markdown("""
+    <style>
+        body {
+            background-color: #111;
+            color: #eee;
+        }
+        .stApp {
+            padding: 2rem;
+        }
+        .stDataFrame tbody tr:hover {
+            background-color: #222 !important;
+        }
+        .stDataFrame thead tr th {
+            background-color: #333;
+            color: #fff;
+        }
+        .stSelectbox label, .stCaption, .stSubheader, .stTitle {
+            color: #ddd;
+        }
+    </style>
+""", unsafe_allow_html=True)
 st.title("⚾ Daily Pitcher Strikeout Model")
 
 options = [(datetime.today() + timedelta(days=i)).strftime('%Y-%m-%d') for i in range(4)]
