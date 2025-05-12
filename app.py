@@ -145,8 +145,7 @@ def get_pitchers_by_date(date):
 
     rows = []
     for game in games:
-        st.write("
---- GAME ---")
+        st.write("--- GAME ---")
         st.write("Home Team:", game['teams']['home']['team']['name'])
         st.write("Away Team:", game['teams']['away']['team']['name'])
         home = game['teams']['home']['team']['name']
