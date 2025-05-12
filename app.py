@@ -5,11 +5,11 @@ import numpy as np
 import requests
 from bs4 import BeautifulSoup
 from sklearn.ensemble import RandomForestRegressor
-from datetime import datetime
+from datetime import datetime, timedelta
 
 # --- Data Scraper for Probable Starters from MLB.com ---
-def get_today_pitchers():
-    url = "https://www.mlb.com/probable-pitchers"
+def get_pitchers_by_date(selected_date):
+    url = f"https://www.mlb.com/probable-pitchers/{selected_date}"
     response = requests.get(url)
     soup = BeautifulSoup(response.text, 'html.parser')
 
@@ -76,13 +76,17 @@ def predict_props(data, model):
 # --- Streamlit App ---
 st.set_page_config(page_title="MLB Strikeout Prop Dashboard", layout="wide")
 st.title("⚾ Daily Pitcher Strikeout Props")
-st.caption(f"Last updated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+
+# Date picker dropdown
+options = [(datetime.today() + timedelta(days=i)).strftime('%Y-%m-%d') for i in range(4)]
+selected_date = st.selectbox("Select Game Date", options)
+st.caption(f"Selected date: {selected_date} — Last updated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
 
 # Load and predict
-data = get_today_pitchers()
+data = get_pitchers_by_date(selected_date)
 
 if data.empty:
-    st.warning("No starting pitchers were found. MLB.com may have updated their site or it's too early in the day.")
+    st.warning("No starting pitchers were found for the selected date. MLB.com may not have updated that day yet.")
 else:
     model = train_model()
     results = predict_props(data, model)
