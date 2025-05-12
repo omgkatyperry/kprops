@@ -78,7 +78,6 @@ def get_scheduled_umpire(home_team, away_team):
         print("Failed to get scheduled umpire:", e)
         return None
 
-
 # --- Simulated Odds Aggregator (Stub until real scraper is added) ---
 def get_strikeout_odds():
     url = "https://www.oddsboom.com/mlb/strikeouts"
@@ -101,70 +100,3 @@ def get_strikeout_odds():
     except Exception as e:
         print("Failed to scrape strikeout props:", e)
         return {}
-        'Kevin Gausman': {'DK': 6.5, 'FD': 6.0, 'B365': 6.5},
-        'Zac Gallen': {'DK': 5.5, 'FD': 5.5, 'B365': 6.0},
-        # Add more as needed
-    }
-
-# --- Main Pitcher Data Builder ---
-def get_pitchers_by_date(selected_date):
-    pitchers = []
-    pitcher_stats = get_fangraphs_pitcher_stats()
-    team_batting = get_team_batting_stats()
-    umpire_k_factors = get_umpire_k_factors()
-    odds_data = get_strikeout_odds()
-
-    url = f"https://statsapi.mlb.com/api/v1/schedule?sportId=1&date={selected_date}&hydrate=probablePitcher"
-    response = requests.get(url)
-    data = response.json()
-
-    try:
-        games = data['dates'][0]['games']
-        for game in games:
-            teams = game.get('teams', {})
-            home_team = teams.get('home', {}).get('team', {}).get('name', 'Home')
-            away_team = teams.get('away', {}).get('team', {}).get('name', 'Away')
-            umpire_name = get_scheduled_umpire(home_team, away_team)
-            k_factor = umpire_k_factors.get(umpire_name, 1.00)
-
-            for side in ['home', 'away']:
-                pitcher_info = teams.get(side, {}).get('probablePitcher')
-                if pitcher_info:
-                    pitcher_name = pitcher_info['fullName']
-                    pitcher_team = home_team if side == 'home' else away_team
-                    opponent_team = away_team if side == 'home' else home_team
-                    matchup = f"vs {opponent_team}" if side == 'home' else f"@ {opponent_team}"
-
-                    stats_row = pitcher_stats[pitcher_stats['Pitcher'].str.contains(pitcher_name.split()[-1], case=False)]
-                    k9 = stats_row['Avg_K_9'].values[0] if not stats_row.empty else np.nan
-                    ip = stats_row['Innings_Pitched'].values[0] if not stats_row.empty else np.nan
-
-                    opp_stats = team_batting.get(opponent_team, {})
-                    k_rate = opp_stats.get('K%', np.nan)
-                    ba = opp_stats.get('BA', np.nan)
-                    obp = opp_stats.get('OBP', np.nan)
-                    wrc = opp_stats.get('wRC+', np.nan)
-
-                    odds = odds_data.get(pitcher_name, {'DK': np.nan, 'FD': np.nan, 'B365': np.nan})
-
-                    pitcher_data = {
-                        'Pitcher': pitcher_name,
-                        'Team': pitcher_team,
-                        'Matchup': matchup,
-                        'Avg_K_9': k9,
-                        'Innings_Pitched': ip,
-                        'Opponent_K_Rate': k_rate,
-                        'Opponent_BA': ba,
-                        'Opponent_OBP': obp,
-                        'Opponent_WRC_Plus': wrc,
-                        'Opponent_vs_Handedness_KRate': k_rate,
-                        'Umpire_K_Factor': k_factor,
-                        'DK_Line': odds['DK'],
-                        'FD_Line': odds['FD'],
-                        'B365_Line': odds['B365']
-                    }
-                    pitchers.append(pitcher_data)
-    except Exception as e:
-        print("Error parsing MLB API:", e)
-
-    return pd.DataFrame(pitchers)
