@@ -127,13 +127,78 @@ selected_date = st.selectbox("Select Game Date", options)
 
 st.caption(f"Selected date: {selected_date} — Last updated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
 
-# --- Final Placeholder Output (to be replaced with actual model integration) ---
-st.info("Live model and prediction output coming shortly. Placeholder displayed below:")
-df = pd.DataFrame({
-    "Pitcher": ["Gerrit Cole", "Kevin Gausman"],
-    "DK Line": [7.5, 6.5],
-    "FD Line": [7.0, 6.0],
-    "B365 Line": [7.5, 6.5],
-    "Opponent": ["@ Red Sox", "vs Yankees"]
-})
-st.dataframe(df)
+# --- Generate and Display Model Predictions ---
+from sklearn.exceptions import NotFittedError
+
+# Placeholder function to gather real pitcher/matchup data
+def get_pitchers_by_date(date):
+    pitcher_stats = get_fangraphs_pitcher_stats()
+    team_stats = get_team_batting_stats()
+    umpire_map = get_umpire_k_factors()
+    odds_data = get_strikeout_odds()
+
+    mlb_url = f"https://statsapi.mlb.com/api/v1/schedule?sportId=1&date={date}&hydrate=probablePitcher"
+    try:
+        games = requests.get(mlb_url).json().get('dates', [])[0].get('games', [])
+    except:
+        return pd.DataFrame()
+
+    rows = []
+    for game in games:
+        home = game['teams']['home']['team']['name']
+        away = game['teams']['away']['team']['name']
+        ump_name = get_scheduled_umpire(home, away)
+        kfactor = umpire_map.get(ump_name, 1.00)
+
+        for side in ['home', 'away']:
+            pitcher = game['teams'][side].get('probablePitcher')
+            if not pitcher: continue
+            name = pitcher['fullName']
+            team = home if side == 'home' else away
+            opp = away if side == 'home' else home
+            matchup = f"vs {opp}" if side == 'home' else f"@ {opp}"
+
+            row = {'Pitcher': name, 'Team': team, 'Matchup': matchup, 'Umpire_K_Factor': kfactor}
+
+            stat = pitcher_stats[pitcher_stats['Pitcher'].str.contains(name.split()[-1], case=False)]
+            if not stat.empty:
+                row['Avg_K_9'] = stat['Avg_K_9'].values[0]
+                row['Innings_Pitched'] = stat['Innings_Pitched'].values[0]
+
+            opp_stats = team_stats.get(opp, {})
+            row['Opponent_K_Rate'] = opp_stats.get('K%', np.nan)
+            row['Opponent_BA'] = opp_stats.get('BA', np.nan)
+            row['Opponent_OBP'] = opp_stats.get('OBP', np.nan)
+            row['Opponent_WRC_Plus'] = opp_stats.get('wRC+', np.nan)
+
+            odds = odds_data.get(name, {})
+            row['DK'] = odds.get('DK', np.nan)
+            row['FD'] = odds.get('FD', np.nan)
+            row['B365'] = odds.get('B365', np.nan)
+
+            rows.append(row)
+    return pd.DataFrame(rows)
+
+# Train model and get pitcher data
+model = train_model()
+pitchers_df = get_pitchers_by_date(selected_date)
+
+# Ensure required features are present and numeric
+features = ['Avg_K_9', 'Innings_Pitched', 'Opponent_K_Rate', 'Opponent_BA', 'Opponent_OBP', 'Opponent_WRC_Plus', 'Umpire_K_Factor']
+for col in features:
+    pitchers_df[col] = pd.to_numeric(pitchers_df[col], errors='coerce')
+pitchers_df.dropna(subset=features, inplace=True)
+
+try:
+    # Predict strikeouts
+    pitchers_df['Predicted_Ks'] = model.predict(pitchers_df[features])
+    pitchers_df['Edge_vs_DK'] = pitchers_df['Predicted_Ks'] - pitchers_df['DK']
+    pitchers_df['Edge_vs_FD'] = pitchers_df['Predicted_Ks'] - pitchers_df['FD']
+    pitchers_df['Edge_vs_B365'] = pitchers_df['Predicted_Ks'] - pitchers_df['B365']
+
+    # Display
+    display_cols = ['Pitcher', 'Team', 'Matchup', 'Predicted_Ks', 'DK', 'FD', 'B365', 'Edge_vs_DK', 'Edge_vs_FD', 'Edge_vs_B365']
+    st.dataframe(pitchers_df[display_cols].sort_values(by='Predicted_Ks', ascending=False).reset_index(drop=True))
+
+except NotFittedError:
+    st.error("Model could not be fitted. Check training data.")
