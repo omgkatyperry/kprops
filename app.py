@@ -106,6 +106,10 @@ def get_pitchers_by_date(date):
     return pd.DataFrame(rows)
 
 model = train_model()
+
+# DEBUG: Show raw pitcher data before filtering
+st.subheader("🔍 Raw Pitcher Data Before Filtering")
+st.dataframe(pitchers_df)
 pitchers_df = get_pitchers_by_date(selected_date)
 
 features = [
