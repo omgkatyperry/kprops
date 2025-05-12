@@ -7,31 +7,35 @@ from bs4 import BeautifulSoup
 from sklearn.ensemble import RandomForestRegressor
 from datetime import datetime
 
-# --- Data Scraper for All Probable Starters ---
+# --- Data Scraper for All Probable Starters from Rotowire ---
 def get_today_pitchers():
-    url = "https://www.espn.com/mlb/probables"
+    url = "https://www.rotowire.com/baseball/daily-lineups.php"
     response = requests.get(url)
     soup = BeautifulSoup(response.text, 'html.parser')
 
     pitchers = []
-    rows = soup.select("section.Probables__Table table tbody tr")
-    for row in rows:
+    starter_sections = soup.find_all("div", class_="lineup is-probable")
+
+    for section in starter_sections:
         try:
-            pitcher_name = row.find_all("td")[1].text.strip()
-            team_stats = {
-                'Pitcher': pitcher_name,
-                'Avg_K_9': np.random.uniform(7.5, 11.5),
-                'Innings_Pitched': np.random.uniform(5.0, 7.0),
-                'Opponent_K_Rate': np.random.uniform(18.0, 27.0),
-                'Opponent_BA': np.random.uniform(0.220, 0.270),
-                'Opponent_OBP': np.random.uniform(0.290, 0.340),
-                'Opponent_WRC_Plus': np.random.randint(85, 110),
-                'Opponent_vs_Handedness_KRate': np.random.uniform(18.0, 30.0),
-                'Umpire_K_Factor': np.random.uniform(0.95, 1.05),
-                'Sportsbook_Line': np.random.uniform(4.5, 7.5)
-            }
-            pitchers.append(team_stats)
-        except Exception as e:
+            team_info = section.find("div", class_="lineup__team").text.strip()
+            pitcher_tag = section.find("div", class_="lineup__note")
+            if pitcher_tag and "Probable Pitcher" in pitcher_tag.text:
+                pitcher_name = pitcher_tag.text.replace("Probable Pitcher: ", "").strip()
+                team_stats = {
+                    'Pitcher': pitcher_name,
+                    'Avg_K_9': np.random.uniform(7.5, 11.5),
+                    'Innings_Pitched': np.random.uniform(5.0, 7.0),
+                    'Opponent_K_Rate': np.random.uniform(18.0, 27.0),
+                    'Opponent_BA': np.random.uniform(0.220, 0.270),
+                    'Opponent_OBP': np.random.uniform(0.290, 0.340),
+                    'Opponent_WRC_Plus': np.random.randint(85, 110),
+                    'Opponent_vs_Handedness_KRate': np.random.uniform(18.0, 30.0),
+                    'Umpire_K_Factor': np.random.uniform(0.95, 1.05),
+                    'Sportsbook_Line': np.random.uniform(4.5, 7.5)
+                }
+                pitchers.append(team_stats)
+        except Exception:
             continue
 
     return pd.DataFrame(pitchers)
