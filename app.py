@@ -75,18 +75,6 @@ def get_scheduled_umpire(home_team, away_team):
     except Exception as e:
         print("Failed to get scheduled umpire:", e)
         return None
-    except Exception as e:
-        print("Failed to get scheduled umpire:", e)
-        return None
-    except Exception as e:
-        print("Failed to get scheduled umpire:", e)
-        return None
-    except Exception as e:
-        print("Failed to get scheduled umpire:", e)
-        return None
-    except Exception as e:
-        print("Failed to get scheduled umpire:", e)
-        return None
 
 # --- Simulated Odds Aggregator (Stub until real scraper is added) ---
 def get_strikeout_odds():
