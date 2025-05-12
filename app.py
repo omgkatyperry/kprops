@@ -100,7 +100,7 @@ def get_strikeout_odds():
         return odds_data
     except Exception as e:
         print("Failed to scrape strikeout props:", e)
-        return {},
+        return {}
         'Kevin Gausman': {'DK': 6.5, 'FD': 6.0, 'B365': 6.5},
         'Zac Gallen': {'DK': 5.5, 'FD': 5.5, 'B365': 6.0},
         # Add more as needed
