@@ -86,7 +86,8 @@ def get_pitchers_by_date(date):
             matchup = f"vs {opp}" if side == 'home' else f"@ {opp}"
 
             row = {'Pitcher': name, 'Team': team, 'Matchup': matchup}
-            stat = pitcher_stats[pitcher_stats['Pitcher'].str.lower() == name.lower()]
+            last_name = name.split()[-1].lower()
+            stat = pitcher_stats[pitcher_stats['Pitcher'].str.lower().str.contains(last_name)]
             if not stat.empty:
                 row['Avg_K_9'] = stat['Avg_K_9'].values[0]
                 row['Innings_Pitched'] = stat['Innings_Pitched'].values[0]
