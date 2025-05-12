@@ -14,13 +14,10 @@ def get_pitchers_by_date(selected_date):
     soup = BeautifulSoup(response.text, 'html.parser')
 
     pitchers = []
-    games = soup.find_all("div", class_="probable-pitchers__pitcher")
+    name_tags = soup.select("a.probable-pitchers__pitcher-name")
 
-    for game in games:
+    for name_tag in name_tags:
         try:
-            name_tag = game.find("a", class_="probable-pitchers__pitcher-name")
-            if not name_tag:
-                continue
             pitcher_name = name_tag.text.strip()
 
             # Simulated placeholder stats for now
