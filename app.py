@@ -60,15 +60,20 @@ def get_scheduled_umpire(home_team, away_team):
     try:
         schedule_url = "https://www.rotowire.com/baseball/mlb-lineups.php"
         response = requests.get(schedule_url, headers={"User-Agent": "Mozilla/5.0"})
+        from bs4 import BeautifulSoup
         soup = BeautifulSoup(response.text, 'html.parser')
         matchups = soup.find_all('div', class_='lineup__card')
         for matchup in matchups:
             teams = matchup.find('div', class_='lineup__teams').text.strip()
             ump_info = matchup.find('div', class_='lineup__note')
             if ump_info and 'Umpire:' in ump_info.text:
-               ump_name = ump_info.text.split('Umpire:')[-1].split('\n')[0].strip()
+                ump_name = ump_info.text.split('Umpire:')[-1].split('
+')[0].strip()
                 if home_team in teams and away_team in teams:
                     return ump_name
+        return None
+    except Exception as e:
+        print("Failed to get scheduled umpire:", e)
         return None
     except Exception as e:
         print("Failed to get scheduled umpire:", e)
