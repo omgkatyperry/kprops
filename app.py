@@ -66,8 +66,7 @@ def get_scheduled_umpire(home_team, away_team):
             teams = matchup.find('div', class_='lineup__teams').text.strip()
             ump_info = matchup.find('div', class_='lineup__note')
             if ump_info and 'Umpire:' in ump_info.text:
-                ump_name = ump_info.text.split('Umpire:')[-1].split('
-')[0].strip()
+               ump_name = ump_info.text.split('Umpire:')[-1].split('\n')[0].strip()
                 if home_team in teams and away_team in teams:
                     return ump_name
         return None
