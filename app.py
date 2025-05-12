@@ -196,7 +196,10 @@ if pitchers_df.empty:
 else:
     # Ensure required features are present and numeric
     for col in features:
-        pitchers_df[col] = pd.to_numeric(pitchers_df[col], errors='coerce')
+        if col in pitchers_df.columns:
+            pitchers_df[col] = pd.to_numeric(pitchers_df[col], errors='coerce')
+        else:
+            pitchers_df[col] = np.nan
     pitchers_df.dropna(subset=features, inplace=True)
 
 try:
