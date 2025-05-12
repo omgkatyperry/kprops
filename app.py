@@ -207,7 +207,9 @@ else:
             pitchers_df['Edge_vs_B365'] = pitchers_df['Predicted_Ks'] - pitchers_df['B365']
 
             display_cols = ['Pitcher', 'Team', 'Matchup', 'Predicted_Ks', 'DK', 'FD', 'B365', 'Edge_vs_DK', 'Edge_vs_FD', 'Edge_vs_B365']
-            st.dataframe(pitchers_df[display_cols].sort_values(by='Predicted_Ks', ascending=False).reset_index(drop=True))
+            styled_df = pitchers_df[display_cols].copy()
+styled_df[['Predicted_Ks', 'DK', 'FD', 'B365', 'Edge_vs_DK', 'Edge_vs_FD', 'Edge_vs_B365']] = styled_df[['Predicted_Ks', 'DK', 'FD', 'B365', 'Edge_vs_DK', 'Edge_vs_FD', 'Edge_vs_B365']].round(2)
+st.dataframe(styled_df.sort_values(by='Predicted_Ks', ascending=False).reset_index(drop=True), use_container_width=True).reset_index(drop=True))
 
         except Exception as e:
             st.error(f"Prediction failed: {e}")
