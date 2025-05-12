@@ -12,7 +12,9 @@ def get_pitcher_stats():
     url = "https://www.baseball-reference.com/leagues/majors/2024-standard-pitching.shtml"
     try:
         tables = pd.read_html(url)
-        for table in tables:
+        st.write(f'Found {len(tables)} tables on page.')
+        for i, table in enumerate(tables):
+            st.write(f'Table {i} columns:', list(table.columns))
             if 'Player' in table.columns and 'SO9' in table.columns and 'IP' in table.columns and 'H/9' in table.columns:
                 df = table[['Player', 'IP', 'SO9', 'BB9', 'H/9', 'HR/9', 'ERA', 'FIP', 'WHIP']].copy()
                 df.columns = ['Pitcher', 'IP', 'K9', 'BB9', 'H9', 'HR9', 'ERA', 'FIP', 'WHIP']
@@ -20,10 +22,10 @@ def get_pitcher_stats():
                 df = df.apply(pd.to_numeric, errors='ignore')
                 return df
         st.error("❌ No valid pitcher stat table found.")
-        return pd.DataFrame()
+        return pd.DataFrame(columns=['Pitcher', 'IP', 'K9', 'BB9', 'H9', 'HR9', 'ERA', 'FIP', 'WHIP'])
     except Exception as e:
         st.error(f"❌ Failed to scrape pitcher stats: {e}")
-        return pd.DataFrame()
+        return pd.DataFrame(columns=['Pitcher', 'IP', 'K9', 'BB9', 'H9', 'HR9', 'ERA', 'FIP', 'WHIP'])
 
 # Placeholder opponent batting stats (can be replaced with scraper)
 def get_team_batting_stats():
@@ -69,7 +71,7 @@ def get_pitchers_by_date(date):
     try:
         games = requests.get(mlb_url).json().get('dates', [])[0].get('games', [])
     except:
-        return pd.DataFrame()
+        return pd.DataFrame(columns=['Pitcher', 'IP', 'K9', 'BB9', 'H9', 'HR9', 'ERA', 'FIP', 'WHIP'])
 
     rows = []
     for game in games:
