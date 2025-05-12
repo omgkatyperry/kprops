@@ -10,7 +10,7 @@ from datetime import datetime, timedelta
 def get_fangraphs_pitcher_stats():
     url = "https://www.fangraphs.com/leaders.aspx?pos=all&stats=pit&lg=all&qual=0&type=1&season=2024&month=0&season1=2024&ind=0"
     try:
-        tables = pd.read_html(url)
+                tables = pd.read_html(url)
         for table in tables:
             if 'Name' in table.columns and 'K/9' in table.columns and 'IP' in table.columns:
                 df = table[['Name', 'K/9', 'IP']].copy()
@@ -202,16 +202,19 @@ else:
             pitchers_df[col] = np.nan
     pitchers_df.dropna(subset=features, inplace=True)
 
-try:
-    # Predict strikeouts
-    pitchers_df['Predicted_Ks'] = model.predict(pitchers_df[features])
-    pitchers_df['Edge_vs_DK'] = pitchers_df['Predicted_Ks'] - pitchers_df['DK']
-    pitchers_df['Edge_vs_FD'] = pitchers_df['Predicted_Ks'] - pitchers_df['FD']
-    pitchers_df['Edge_vs_B365'] = pitchers_df['Predicted_Ks'] - pitchers_df['B365']
+if pitchers_df.empty:
+    st.warning("No usable pitcher data found after filtering. Likely due to unmatched names or missing stats.")
+else:
+    try:
+        # Predict strikeouts
+        pitchers_df['Predicted_Ks'] = model.predict(pitchers_df[features])
+        pitchers_df['Edge_vs_DK'] = pitchers_df['Predicted_Ks'] - pitchers_df['DK']
+        pitchers_df['Edge_vs_FD'] = pitchers_df['Predicted_Ks'] - pitchers_df['FD']
+        pitchers_df['Edge_vs_B365'] = pitchers_df['Predicted_Ks'] - pitchers_df['B365']
 
-    # Display
-    display_cols = ['Pitcher', 'Team', 'Matchup', 'Predicted_Ks', 'DK', 'FD', 'B365', 'Edge_vs_DK', 'Edge_vs_FD', 'Edge_vs_B365']
+        # Display
+        display_cols = ['Pitcher', 'Team', 'Matchup', 'Predicted_Ks', 'DK', 'FD', 'B365', 'Edge_vs_DK', 'Edge_vs_FD', 'Edge_vs_B365']
     st.dataframe(pitchers_df[display_cols].sort_values(by='Predicted_Ks', ascending=False).reset_index(drop=True))
 
-except NotFittedError:
-    st.error("Model could not be fitted. Check training data.")
+        except NotFittedError:
+            st.error("Model could not be fitted. Check training data.")
