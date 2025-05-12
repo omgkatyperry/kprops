@@ -157,8 +157,9 @@ else:
     else:
         try:
             pitchers_df['Predicted_Ks'] = model.predict(pitchers_df[features])
-            display_cols = ['Pitcher', 'Team', 'Matchup', 'Predicted_Ks']
+            display_cols = ['Pitcher', 'Team', 'Matchup', 'Avg_K_9', 'Innings_Pitched', 'Opponent_K_Rate', 'Opponent_BA', 'Opponent_OBP', 'Opponent_WRC_Plus', 'Predicted_Ks']
             styled_df = pitchers_df[display_cols].copy()
+styled_df[['Avg_K_9', 'Innings_Pitched', 'Opponent_K_Rate', 'Opponent_BA', 'Opponent_OBP', 'Opponent_WRC_Plus', 'Predicted_Ks']] = styled_df[['Avg_K_9', 'Innings_Pitched', 'Opponent_K_Rate', 'Opponent_BA', 'Opponent_OBP', 'Opponent_WRC_Plus', 'Predicted_Ks']].round(2)
             styled_df[['Predicted_Ks']] = styled_df[['Predicted_Ks']].round(2)
             st.dataframe(styled_df.sort_values(by='Predicted_Ks', ascending=False).reset_index(drop=True), use_container_width=True)
         except Exception as e:
