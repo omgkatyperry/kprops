@@ -7,27 +7,22 @@ import requests
 from sklearn.ensemble import RandomForestRegressor
 from datetime import datetime, timedelta
 
-# --- Safe & Verbose Pitcher Stats Scraper ---
+# --- Pitcher Stats Scraper with Hardcoded Table Index ---
 def get_pitcher_stats():
     url = "https://www.baseball-reference.com/leagues/majors/2024-standard-pitching.shtml"
     try:
         tables = pd.read_html(url)
-        st.write(f"✅ Found {len(tables)} tables.")
-        for i, table in enumerate(tables):
-            st.write(f"🔍 Table {i} Columns: {list(table.columns)}")
-            if 'Player' in table.columns and 'SO9' in table.columns and 'IP' in table.columns:
-                df = table[['Player', 'IP', 'SO9', 'BB9', 'H/9', 'HR/9', 'ERA', 'FIP', 'WHIP']].copy()
-                df.columns = ['Pitcher', 'IP', 'K9', 'BB9', 'H9', 'HR9', 'ERA', 'FIP', 'WHIP']
-                df['Pitcher'] = df['Pitcher'].str.replace(r'\.*', '', regex=True).str.strip()
-                df = df.apply(pd.to_numeric, errors='ignore')
-                return df
-        st.warning("⚠️ No valid pitcher table found in Baseball-Reference scrape.")
-        return pd.DataFrame(columns=['Pitcher', 'IP', 'K9', 'BB9', 'H9', 'HR9', 'ERA', 'FIP', 'WHIP'])
+        st.write(f"✅ Scraped {len(tables)} tables from Baseball-Reference.")
+        df = tables[1]  # Assumes table 1 is the correct one for 2024 Standard Pitching
+        df = df[['Player', 'IP', 'SO9', 'BB9', 'H/9', 'HR/9', 'ERA', 'FIP', 'WHIP']].copy()
+        df.columns = ['Pitcher', 'IP', 'K9', 'BB9', 'H9', 'HR9', 'ERA', 'FIP', 'WHIP']
+        df['Pitcher'] = df['Pitcher'].str.replace(r'\.*', '', regex=True).str.strip()
+        df = df.apply(pd.to_numeric, errors='ignore')
+        return df
     except Exception as e:
-        st.error(f"❌ Failed to scrape pitcher stats: {e}")
+        st.error(f"❌ Failed to load pitcher stats: {e}")
         return pd.DataFrame(columns=['Pitcher', 'IP', 'K9', 'BB9', 'H9', 'HR9', 'ERA', 'FIP', 'WHIP'])
 
-# Dummy opponent team batting stats
 def get_team_batting_stats():
     return {
         'Yankees': {'K%': 22.3, 'wRC+': 107},
@@ -36,7 +31,6 @@ def get_team_batting_stats():
         'Blue Jays': {'K%': 21.2, 'wRC+': 98},
     }
 
-# --- Model Training ---
 def train_model():
     data = pd.DataFrame({
         'K9': [9.5, 8.2, 10.1, 7.3, 11.0],
@@ -51,7 +45,7 @@ def train_model():
         'Predicted_Ks': [6.5, 5.0, 7.2, 4.3, 8.0]
     })
     X = data.drop(columns='Predicted_Ks')
-    y = data['Projected_Ks']
+    y = data['Predicted_Ks']
     model = RandomForestRegressor(n_estimators=100, random_state=42)
     model.fit(X, y)
     return model
