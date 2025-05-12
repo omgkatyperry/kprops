@@ -7,22 +7,22 @@ import requests
 from sklearn.ensemble import RandomForestRegressor
 from datetime import datetime, timedelta
 
-# --- Real Pitcher Stats Scraper from Baseball Savant ---
+# --- Real Pitcher Stats Scraper from Baseball-Reference ---
 def get_pitcher_stats():
-    url = "https://baseballsavant.mlb.com/leaderboard/statcast?type=pitcher&year=2024&position=P&team=&min=q&sort=9&sortDir=desc"
+    url = "https://www.baseball-reference.com/leagues/majors/2024-pitching-leaders.shtml"
     try:
         tables = pd.read_html(url)
         for table in tables:
-            if 'Name' in table.columns and 'K/9' in table.columns and 'IP' in table.columns:
-                df = table[['Name', 'K/9', 'IP']].copy()
+            if 'Name' in table.columns and 'SO9' in table.columns and 'IP' in table.columns:
+                df = table[['Name', 'SO9', 'IP']].copy()
                 df.columns = ['Pitcher', 'Avg_K_9', 'Innings_Pitched']
-                df['Pitcher'] = df['Pitcher'].str.strip()
+                df['Pitcher'] = df['Pitcher'].str.replace(r'\.*', '', regex=True).str.strip()
                 df['Innings_Pitched'] = pd.to_numeric(df['Innings_Pitched'], errors='coerce')
                 return df
-        st.error("❌ No valid pitcher stat table found on Baseball Savant.")
+        st.error("❌ No valid pitcher stat table found on Baseball-Reference.")
         return pd.DataFrame(columns=['Pitcher', 'Avg_K_9', 'Innings_Pitched'])
     except Exception as e:
-        st.error(f"❌ Failed to scrape Baseball Savant: {e}")
+        st.error(f"❌ Failed to scrape Baseball-Reference: {e}")
         return pd.DataFrame(columns=['Pitcher', 'Avg_K_9', 'Innings_Pitched'])
 
 # --- Opponent Team Batting Stats (Static Placeholder until replaced) ---
@@ -69,7 +69,7 @@ def get_pitchers_by_date(date):
         return pd.DataFrame()
 
     if pitcher_stats.empty:
-        st.error("❌ No pitcher stats found from Baseball Savant.")
+        st.error("❌ No pitcher stats found from Baseball-Reference.")
         return pd.DataFrame()
 
     rows = []
