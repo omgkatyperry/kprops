@@ -7,14 +7,14 @@ import requests
 from sklearn.ensemble import RandomForestRegressor
 from datetime import datetime, timedelta
 
-# --- Real Pitcher Stats Scraper from Baseball-Reference ---
+# --- Real Pitcher Stats Scraper from Baseball-Reference Standard Pitching ---
 def get_pitcher_stats():
-    url = "https://www.baseball-reference.com/leagues/majors/2024-pitching-leaders.shtml"
+    url = "https://www.baseball-reference.com/leagues/majors/2024-standard-pitching.shtml"
     try:
         tables = pd.read_html(url)
         for table in tables:
-            if 'Name' in table.columns and 'SO9' in table.columns and 'IP' in table.columns:
-                df = table[['Name', 'SO9', 'IP']].copy()
+            if 'Player' in table.columns and 'SO9' in table.columns and 'IP' in table.columns:
+                df = table[['Player', 'SO9', 'IP']].copy()
                 df.columns = ['Pitcher', 'Avg_K_9', 'Innings_Pitched']
                 df['Pitcher'] = df['Pitcher'].str.replace(r'\.*', '', regex=True).str.strip()
                 df['Innings_Pitched'] = pd.to_numeric(df['Innings_Pitched'], errors='coerce')
