@@ -61,6 +61,8 @@ st.caption(f"Selected date: {selected_date} — Last updated: {datetime.now().st
 
 def get_pitchers_by_date(date):
     pitcher_stats = get_pitcher_stats()
+    st.subheader('📊 Raw Pitcher Stats (Debug)')
+    st.dataframe(pitcher_stats)
     team_stats = get_team_batting_stats()
     mlb_url = f"https://statsapi.mlb.com/api/v1/schedule?sportId=1&date={date}&hydrate=probablePitcher"
     try:
