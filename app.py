@@ -67,10 +67,16 @@ def get_scheduled_umpire(home_team, away_team):
             teams = matchup.find('div', class_='lineup__teams').text.strip()
             ump_info = matchup.find('div', class_='lineup__note')
             if ump_info and 'Umpire:' in ump_info.text:
-                ump_name = ump_info.text.split('Umpire:')[-1].split('
-')[0].strip()
-                if home_team in teams and away_team in teams:
-                    return ump_name
+                text = ump_info.text.strip()
+                ump_line = [line for line in text.split('
+') if 'Umpire:' in line]
+                if ump_line:
+                    ump_name = ump_line[0].split('Umpire:')[-1].strip()
+                    if home_team in teams and away_team in teams:
+                        return ump_name
+        return None
+    except Exception as e:
+        print("Failed to get scheduled umpire:", e)
         return None
     except Exception as e:
         print("Failed to get scheduled umpire:", e)
