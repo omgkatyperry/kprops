@@ -18,9 +18,9 @@ def get_today_pitchers():
 
     for section in starter_sections:
         try:
-            team_info = section.find("div", class_="lineup__team").text.strip()
+            team_info = section.find("div", class_="lineup__team")
             pitcher_tag = section.find("div", class_="lineup__note")
-            if pitcher_tag and "Probable Pitcher" in pitcher_tag.text:
+            if team_info and pitcher_tag and "Probable Pitcher" in pitcher_tag.text:
                 pitcher_name = pitcher_tag.text.replace("Probable Pitcher: ", "").strip()
                 team_stats = {
                     'Pitcher': pitcher_name,
@@ -78,14 +78,18 @@ st.caption(f"Last updated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
 
 # Load and predict
 data = get_today_pitchers()
-model = train_model()
-results = predict_props(data, model)
 
-# Display output
-st.dataframe(results[['Pitcher', 'Predicted_Ks', 'Sportsbook_Line', 'Edge', 'Confidence']])
+if data.empty:
+    st.warning("No starting pitchers were found. Rotowire may have updated their site or it's too early in the day.")
+else:
+    model = train_model()
+    results = predict_props(data, model)
 
-# Optional filters
-conf_filter = st.selectbox("Filter by Confidence", options=['All', 'High', 'Moderate', 'Low'])
-if conf_filter != 'All':
-    results = results[results['Confidence'] == conf_filter]
+    # Display output
     st.dataframe(results[['Pitcher', 'Predicted_Ks', 'Sportsbook_Line', 'Edge', 'Confidence']])
+
+    # Optional filters
+    conf_filter = st.selectbox("Filter by Confidence", options=['All', 'High', 'Moderate', 'Low'])
+    if conf_filter != 'All':
+        results = results[results['Confidence'] == conf_filter]
+        st.dataframe(results[['Pitcher', 'Predicted_Ks', 'Sportsbook_Line', 'Edge', 'Confidence']])
