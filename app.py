@@ -7,34 +7,36 @@ from bs4 import BeautifulSoup
 from sklearn.ensemble import RandomForestRegressor
 from datetime import datetime
 
-# --- Data Scraper for All Probable Starters from Rotowire ---
+# --- Data Scraper for Probable Starters from MLB.com ---
 def get_today_pitchers():
-    url = "https://www.rotowire.com/baseball/daily-lineups.php"
+    url = "https://www.mlb.com/probable-pitchers"
     response = requests.get(url)
     soup = BeautifulSoup(response.text, 'html.parser')
 
     pitchers = []
-    starter_sections = soup.find_all("div", class_="lineup is-probable")
+    games = soup.find_all("div", class_="probable-pitchers__pitcher")
 
-    for section in starter_sections:
+    for game in games:
         try:
-            team_info = section.find("div", class_="lineup__team")
-            pitcher_tag = section.find("div", class_="lineup__note")
-            if team_info and pitcher_tag and "Probable Pitcher" in pitcher_tag.text:
-                pitcher_name = pitcher_tag.text.replace("Probable Pitcher: ", "").strip()
-                team_stats = {
-                    'Pitcher': pitcher_name,
-                    'Avg_K_9': np.random.uniform(7.5, 11.5),
-                    'Innings_Pitched': np.random.uniform(5.0, 7.0),
-                    'Opponent_K_Rate': np.random.uniform(18.0, 27.0),
-                    'Opponent_BA': np.random.uniform(0.220, 0.270),
-                    'Opponent_OBP': np.random.uniform(0.290, 0.340),
-                    'Opponent_WRC_Plus': np.random.randint(85, 110),
-                    'Opponent_vs_Handedness_KRate': np.random.uniform(18.0, 30.0),
-                    'Umpire_K_Factor': np.random.uniform(0.95, 1.05),
-                    'Sportsbook_Line': np.random.uniform(4.5, 7.5)
-                }
-                pitchers.append(team_stats)
+            name_tag = game.find("a", class_="probable-pitchers__pitcher-name")
+            if not name_tag:
+                continue
+            pitcher_name = name_tag.text.strip()
+
+            # Simulated placeholder stats for now
+            pitcher_data = {
+                'Pitcher': pitcher_name,
+                'Avg_K_9': np.random.uniform(7.5, 11.5),
+                'Innings_Pitched': np.random.uniform(5.0, 7.0),
+                'Opponent_K_Rate': np.random.uniform(18.0, 27.0),
+                'Opponent_BA': np.random.uniform(0.220, 0.270),
+                'Opponent_OBP': np.random.uniform(0.290, 0.340),
+                'Opponent_WRC_Plus': np.random.randint(85, 110),
+                'Opponent_vs_Handedness_KRate': np.random.uniform(18.0, 30.0),
+                'Umpire_K_Factor': np.random.uniform(0.95, 1.05),
+                'Sportsbook_Line': np.random.uniform(4.5, 7.5)
+            }
+            pitchers.append(pitcher_data)
         except Exception:
             continue
 
@@ -80,7 +82,7 @@ st.caption(f"Last updated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
 data = get_today_pitchers()
 
 if data.empty:
-    st.warning("No starting pitchers were found. Rotowire may have updated their site or it's too early in the day.")
+    st.warning("No starting pitchers were found. MLB.com may have updated their site or it's too early in the day.")
 else:
     model = train_model()
     results = predict_props(data, model)
