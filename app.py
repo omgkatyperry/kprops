@@ -16,7 +16,7 @@ def get_fangraphs_pitcher_stats():
                 df = table[['Name', 'K/9', 'IP']].copy()
                 df.columns = ['Pitcher', 'Avg_K_9', 'Innings_Pitched']
                 df['Pitcher'] = df['Pitcher'].str.strip()
-                df['Innings_Pitched'] = pd.to_numeric(df['Innings_Pitched'], errors='coerce') / 30  # Est. IP per start
+                df['Innings_Pitched'] = pd.to_numeric(df['Innings_Pitched'], errors='coerce') / 30
                 return df
     except Exception as e:
         print("Failed to scrape FanGraphs:", e)
@@ -55,7 +55,7 @@ def get_umpire_k_factors():
         'Tripp Gibson': 0.98,
     }
 
-# --- Scheduled Umpire Mapping (Manual Example) ---
+# --- Scheduled Umpire Mapping ---
 def get_scheduled_umpire(home_team, away_team):
     try:
         schedule_url = "https://www.rotowire.com/baseball/mlb-lineups.php"
@@ -78,7 +78,7 @@ def get_scheduled_umpire(home_team, away_team):
         print("Failed to get scheduled umpire:", e)
         return None
 
-# --- Simulated Odds Aggregator (Stub until real scraper is added) ---
+# --- Odds Aggregator ---
 def get_strikeout_odds():
     url = "https://www.oddsboom.com/mlb/strikeouts"
     odds_data = {}
@@ -86,7 +86,6 @@ def get_strikeout_odds():
         headers = {"User-Agent": "Mozilla/5.0"}
         response = requests.get(url, headers=headers, timeout=10)
         tables = pd.read_html(response.text)
-
         for table in tables:
             if 'Player' in table.columns:
                 for _, row in table.iterrows():
@@ -100,3 +99,41 @@ def get_strikeout_odds():
     except Exception as e:
         print("Failed to scrape strikeout props:", e)
         return {}
+
+# --- Prediction Model ---
+def train_model():
+    data = pd.DataFrame({
+        'Avg_K_9': [9.5, 8.2, 10.1, 7.3, 11.0],
+        'Innings_Pitched': [6.0, 5.2, 6.1, 4.1, 7.0],
+        'Opponent_K_Rate': [25.0, 21.5, 27.2, 23.3, 29.1],
+        'Opponent_BA': [0.242, 0.260, 0.230, 0.250, 0.218],
+        'Opponent_OBP': [0.315, 0.330, 0.298, 0.310, 0.275],
+        'Opponent_WRC_Plus': [96, 102, 89, 94, 78],
+        'Umpire_K_Factor': [1.00, 0.97, 1.03, 0.95, 1.05],
+        'Projected_Ks': [6.5, 5.0, 7.2, 4.3, 8.0]
+    })
+    X = data.drop(columns='Projected_Ks')
+    y = data['Projected_Ks']
+    model = RandomForestRegressor(n_estimators=100, random_state=42)
+    model.fit(X, y)
+    return model
+
+# --- Streamlit UI ---
+st.set_page_config(page_title="MLB Strikeout Prop Dashboard", layout="wide")
+st.title("⚾ Daily Pitcher Strikeout Props")
+
+options = [(datetime.today() + timedelta(days=i)).strftime('%Y-%m-%d') for i in range(4)]
+selected_date = st.selectbox("Select Game Date", options)
+
+st.caption(f"Selected date: {selected_date} — Last updated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S")}")
+
+# --- Final Placeholder Output (to be replaced with actual model integration) ---
+st.info("Live model and prediction output coming shortly. Placeholder displayed below:")
+df = pd.DataFrame({
+    "Pitcher": ["Gerrit Cole", "Kevin Gausman"],
+    "DK Line": [7.5, 6.5],
+    "FD Line": [7.0, 6.0],
+    "B365 Line": [7.5, 6.5],
+    "Opponent": ["@ Red Sox", "vs Yankees"]
+})
+st.dataframe(df)
