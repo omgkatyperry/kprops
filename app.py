@@ -125,7 +125,7 @@ st.title("⚾ Daily Pitcher Strikeout Props")
 options = [(datetime.today() + timedelta(days=i)).strftime('%Y-%m-%d') for i in range(4)]
 selected_date = st.selectbox("Select Game Date", options)
 
-st.caption(f"Selected date: {selected_date} — Last updated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S")}")
+st.caption(f"Selected date: {selected_date} — Last updated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
 
 # --- Final Placeholder Output (to be replaced with actual model integration) ---
 st.info("Live model and prediction output coming shortly. Placeholder displayed below:")
