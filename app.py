@@ -183,6 +183,13 @@ def get_pitchers_by_date(date):
 model = train_model()
 pitchers_df = get_pitchers_by_date(selected_date)
 
+# Define features used in the model
+features = [
+    'Avg_K_9', 'Innings_Pitched', 'Opponent_K_Rate',
+    'Opponent_BA', 'Opponent_OBP', 'Opponent_WRC_Plus',
+    'Umpire_K_Factor'
+]
+
 # Handle empty dataframe case
 if pitchers_df.empty:
     st.warning("No pitcher data available for the selected date.")
